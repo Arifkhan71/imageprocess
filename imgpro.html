@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handwriting Recognition</title>
+    <style>
+        /* General Styles */
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            text-align: center;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            font-size: 30px;
+        }
+        h2 {
+            margin-top: 10px;
+            margin-bottom: 15px;
+            font-size: 28px;
+        }
+                
+        #inputSection {
+            max-width: 1200px;
+            margin: auto;
+        }
+                
+        #canvas {
+            border: 1px solid #000;
+            cursor: crosshair;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+
+        /* Button Styles */
+        button, #clearButton, #pencilButton, #eraserButton, #saveButton, #restartButton, #recognizeButton, #feedbackButton {
+            color: white;
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+        }
+
+        #clearButton, .clearbutton {
+            background-color: #a2e23d;
+            color: #333;
+        }
+        
+        #pencilButton, #eraserButton {
+            background-color: #32cd32;
+            margin-right: 10px;
+        }
+        #restartButton {
+            background-color: #f93f3f;
+            color: #fff;
+        }
+        
+        #recognizeButton {
+            background-color: #333;
+        }
+
+        /* Additional Elements */
+        #recognizedText {
+            width: 1200px;
+            text-align: center;
+            font-size: 100px;
+            font-weight: bolder;
+            color: black;
+            height: 100px;
+            border: 1px solid #ddd;
+            background-color: #f2efef;
+            margin: auto;
+            margin-bottom: 30px;
+        }
+        
+        #feedbackSection {
+            text-align: end;
+            margin: auto;
+            margin-bottom: 20px;
+        }
+
+        #feedbackButton {
+            background-color: #ff8c00;
+        }
+
+        #saveButton {
+            background-color: #4682b4;
+            font-size: 20px;
+            width: 130px;
+            margin: auto;
+        }
+
+        /* Status Bar */
+        #statusBar {
+            background-color: #333;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+
+        /* List Styles */
+        ul {
+            padding: 0;
+            margin: 0 auto;
+            display: flex;
+            list-style-type: none;
+            gap: 100px;
+            justify-content: center;
+            max-width: 80%;
+        }
+
+        /* Pen and Eraser Buttons */
+        #pen {
+            background: #4169e1;
+        }
+        #eraser {
+            background: #dce2f3;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="heading">
+        <h1>Handwriting Digital Recognition</h1>
+    </div>
+    <div id="statusBar">
+        <span id="statusText">
+            <ul>
+                <li><button id="pen">Pen</button></li>
+                <li><button id="eraser">Eraser</button></li>
+                <li><button id="clearButton">Clear</button></li>
+                <li><button id="restartButton">Restart</button></li>
+            </ul>
+        </span>
+    </div>
+
+    <div id="inputSection">
+        <canvas id="canvas" width="1200" height="400"></canvas><br>
+        <div class="recognition-btn"><button id="recognizeButton">Recognize</button></div>
+        <div id="recognitionSection">
+            <h2 style="color:green; font-size:80px;">Results</h2>
+            <div id="recognizedText" style="color:red; font-size:100px;"></div>
+        </div>
+        <div id="feedbackSection">
+            <button id="feedbackButton">Feedback</button>
+        </div>
+        <div class="save-btn">
+            <div id="saveButton">Save/Export</div>
+        </div>
+    </div>
+    
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script>
+        // Canvas and context setup
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+
+        // Variable setup
+        let lastX, lastY;
+        let strokeColor = "white";
+        let backgroundColor = "black";
+        let strokeWidth = 15;
+        let isMouseDown = false;
+        let mode = "pen";
+
+        // Set canvas background
+        canvas.style.backgroundColor = backgroundColor;
+
+        // Button click events
+        document.getElementById('clearButton').addEventListener('click', clearCanvas);
+        document.getElementById('restartButton').addEventListener('click', () => location.reload());
+        document.getElementById('feedbackButton').addEventListener('click', () => alert('Feedback functionality will be implemented here.'));
+        document.getElementById('recognizeButton').addEventListener('click', saveCanvasAsPNG);
+        document.getElementById('saveButton').addEventListener('click', () => alert('Recognized text will be saved and copied to the clipboard'));
+
+        // Mode toggles
+        document.getElementById("pen").onclick = () => mode = "pen";
+        document.getElementById("eraser").onclick = () => mode = "eraser";
+
+        // Mouse Events for Drawing
+        canvas.addEventListener("mousedown", e => {
+            isMouseDown = true;
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+        });
+        canvas.addEventListener("mousemove", draw);
+        canvas.addEventListener("mouseup", () => isMouseDown = false);
+        canvas.addEventListener("mouseout", () => isMouseDown = false);
+
+        function draw(e) {
+            if (!isMouseDown) return;
+            ctx.beginPath();
+            ctx.lineWidth = strokeWidth;
+            ctx.strokeStyle = strokeColor;
+            ctx.lineJoin = "round";
+            ctx.lineCap = "round";
+            if (mode === "pen") {
+                ctx.globalCompositeOperation = "source-over";
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(e.offsetX, e.offsetY);
+                ctx.stroke();
+            } else {
+                ctx.globalCompositeOperation = "destination-out";
+                ctx.arc(e.offsetX, e.offsetY, 8, 0, Math.PI * 2, false);
+                ctx.fill();
+            }
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+        }
+
+        // Clear canvas
+        function clearCanvas() {
+            ctx.fillStyle = backgroundColor;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillRect(0, 0, canvas.width, canvas.height); // Fill background color after clear
+        }
+
+        function saveCanvasAsPNG() {
+                const canvas = document.getElementById("canvas");
+                const dataURL = canvas.toDataURL("image/png");
+                console.log('im ',dataURL)
+
+                fetch("http://localhost:8000/save-canvas", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ imageData: dataURL })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Network response was not ok");
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const recognizedText = data.recognizedText;
+                    document.getElementById("recognizedText").innerText = recognizedText;
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    document.getElementById("recognizedText").innerText = "Recognition failed.";
+                });
+            }
+
+
+        // Get CSRF token (if needed)
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let cookie of cookies) {
+                    cookie = cookie.trim();
+                    if (cookie.startsWith(name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</body>
+
+</html>
